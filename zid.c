@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #define MIN_N 2
 #define MAX_N 250
@@ -9,7 +10,7 @@
 
 int main()
 {
-	unsigned short n, m, i, ii, j, jj, L, nr, cmax, c, LMax, imax, jmax, frec;
+	unsigned short n, m, cmax, ***fr, **a, i, j, cif, c, L, LMax, imax, jmax, frec, fru, ii, jj;
 	char ok;
 
 	FILE *fin = fopen("zid.in", "r");
@@ -36,46 +37,54 @@ int main()
 		return 4;
 	}
 
-	unsigned short f[n+1][m+1][n+1][cmax+1], a[n+1][m+1];
+	fr = (unsigned short***)calloc(n+1, sizeof(unsigned short**));
 
-	for (i = 1; i <= n; i++)
-		for (j = 1; j <= m; j++)
-			for (L = 1; L <= n; L++)
-				for (c = 1; c <= cmax; c++)
-					f[i][j][L][c] = 0;
+	for (i = 0; i <= n; i++) {
+		fr[i] = (unsigned short**)calloc(m+1, sizeof(unsigned short*));
 
-	for (L = i = 1; i <= n; i++)
-		for (j = 1; j <= m; j++) {
-			fscanf(fin, "%hu", &a[i][j]);
-
-			f[i][j][L][a[i][j]] = 1;
+		for (j = 0; j <= m; j++) {
+			fr[i][j] = (unsigned short*)calloc(cmax+1, sizeof(unsigned short));
 		}
+	}
 
-	for (imax = jmax = LMax = i = 1; i <= n; i++)
-		for (j = 1; j <= m; j++)
-			for (L = 2; L <= n-i+1; L++) {
-				for (c = 1; c <= cmax; c++)
-					f[i][j][L][c] = f[i][j][L-1][c];
+	a = (unsigned short**)calloc(n+1, sizeof(unsigned short*));
 
-				for (ii = i; ii <= i+L-1 && ii <= n; ii++)
-					c = a[ii][j+L-1], f[i][j][L][c]++;
+	for (i = 1; i <= n; i++) {
+		a[i] = (unsigned short*)calloc(m+1, sizeof(unsigned short));
 
-				for (jj = j; jj < j+L-1 && jj <= m; jj++)
-					c = a[i+L-1][jj], f[i][j][L][c]++;
+		for (j = 1; j <= m; j++) {
+			fscanf(fin, "%hu", &cif);
+			
+			a[i][j] = cif;
 
-				for (frec = nr = 0, ok = c = 1; c <= cmax && ok; c++)
-					if (f[i][j][L][c] > 0)
-						if (frec == 0)
-							frec = f[i][j][L][c];
-						else
-							if (f[i][j][L][c] != frec)
-								ok = 0;
-				
-				if (ok == 1)
-					if (L > LMax)
-						LMax = L, imax = i, jmax = j;
+			for (c = MIN_CMAX; c <= cmax; c++)
+				fr[i][j][c] = fr[i][j-1][c] + fr[i-1][j][c] - fr[i-1][j-1][c];
+
+			fr[i][j][cif] += 1;
+		}
+	}
+
+	for (LMax = jmax = imax = i = 1; i <= n; i++) {
+		for (j = 1; j <= m; j++) {
+			for (L = n-i+1; L >= 1 && L > LMax && j+L-1 <= m; L--) {
+				ii = i+L-1, jj = j+L-1;
+
+				for (ok = 1, fru = 0, c = MIN_CMAX; c <= cmax && ok; c++) {
+					frec = fr[ii][jj][c] - fr[ii][jj-L][c] - fr[i-1][jj][c] + fr[i-1][j-1][c];
+
+					if (frec && !fru)
+						fru = frec;
+
+					if (frec && fru && frec != fru)
+						ok = 0;	
+				}
+
+				if (ok && L > LMax)
+					LMax = L, imax = i, jmax = j;
 			}
-
+		}
+	}
+	
 	FILE *fout = fopen("zid.out", "w");
 
 	fprintf(fout, "%hu %hu %hu", LMax*LMax, imax, jmax);
@@ -83,6 +92,17 @@ int main()
 	fclose(fin);
 	fclose(fout);
 
+	for (i = 0; i <= n; i++) {
+		for (j = 0; j <= m; j++)
+			free(fr[i][j]);
+		
+		free(fr[i]);
+		free(a[i]);
+	}
+
+	free(fr);
+	free(a);
+
 	return 0;
 }
-// scor 12/100
+// scor 49
