@@ -1,17 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MIN_N 2
-#define MAX_N 250
-#define MIN_M 2
-#define MAX_M 250
-#define MIN_CMAX 1
-#define MAX_CMAX 9
+#define NMAX 300
+#define CMAX 12
 
 int min(int a, int b);
 
+int n, m, c, Lmax, imax, jmax;
+int Z[NMAX][NMAX], F[NMAX][NMAX][CMAX];
+int uz[CMAX];
+
 int main()
 {
+	int i, j, k, ii, jj, L, cate;
+
 	FILE *fin = fopen("zid.in", "r");
 
 	if (!fin) {
@@ -19,127 +21,49 @@ int main()
 		return 1;
 	}
 
-	unsigned short n, m, cmax;
+	fscanf(fin, "%d %d %d", &n, &m, &c);
 
-	fscanf(fin, "%hu %hu %hu", &n, &m, &cmax);
+	for (i = 1; i <= n; i++)
+		for (j = 1; j <= m; j++)
+			fscanf(fin, "%d", &Z[i][j]);
 
-	if (n < MIN_N || n > MAX_N) {
-		printf("Eroare valoare n\n");
-		return 2;
-	}
-
-	if (m < MIN_M || m > MAX_M) {
-		printf("Eroare valoare m\n");
-		return 3;
-	}
-
-	if (cmax < MIN_CMAX || cmax > MAX_CMAX) {
-		printf("Eroare valoare cmax\n");
-		return 4;
-	}
-
-	unsigned short ***fr, i, **a, c, j;
-
-	fr = (unsigned short***)calloc(n+1, sizeof(unsigned short**));
-
-	if (!fr) {
-		printf("Eroare alocare memorie *fr\n");
-		return 5;
-	}
-
-	for (i = 0; i <= n; i++) {
-		fr[i] = (unsigned short**)calloc(m+1, sizeof(unsigned short*));
-
-		if (!fr[i]) {
-			printf("Eroare alocare memorie *fr\n");
-			return 5;
-		}
-
-		for (j = 0; j <= m; j++) {
-			fr[i][j] = (unsigned short*)calloc(cmax+1, sizeof(unsigned short)); 
-			
-			if (!fr[i][j]) {
-				printf("Eroare alocare memorie *fr\n");
-				return 5;
-			}
-		}
-	}
-
-	a = (unsigned short**)calloc(n+1, sizeof(unsigned short*));
-
-	if (!a) {
-		printf("Eroare alocare memorie *a\n");
-		return 6;
-	}
+	// determinarea tabloului de frecvente
+	
+	for (i = 1; i <= n; i++)
+		for (j = 1; j <= m; j++)
+			for (k = 0; k <= c; k++)
+				F[i][j][k] = F[i-1][j][k] + F[i][j-1][k] - F[i-1][j-1][k] + (Z[i][j] == k);
 
 	for (i = 1; i <= n; i++) {
-		a[i] = (unsigned short*)calloc(m+1, sizeof(unsigned short));
-
-		if (!a[i]) {
-			printf("Eroare alocare memorie *a\n");
-			return 6;
-		}
-
 		for (j = 1; j <= m; j++) {
-			fscanf(fin, "%hu", &a[i][j]);
-
-			for (c = MIN_CMAX; c <= cmax; c++)
-				fr[i][j][c] = fr[i][j-1][c] + fr[i-1][j][c] - fr[i-1][j-1][c];
-
-			fr[i][j][a[i][j]] += 1;
-		}
-	}
-
-	unsigned short LMax, jmax, imax, L, ii, jj, *frec, cate;
-
-	frec = (unsigned short*)calloc(cmax+1, sizeof(unsigned short));
-
-	if (!frec) {
-		printf("Eroare alocare memorie *frec\n");
-		return 7;
-	}
-
-	for (LMax = jmax = imax = i = 1; i <= n; i++) {
-		for (j = 1; j <= m; j++) {
-			for (L = min(n-i+1, m-j+1); L > LMax; L--) {
+			for (L = min(n-i+1, m-j+1); L > Lmax; L--) {
 				ii = i+L-1, jj = j+L-1;
 
-				for (c = MIN_CMAX; c <= cmax; c++)
-					frec[c] = fr[ii][jj][c] - fr[ii][j-1][c] - fr[i-1][jj][c] + fr[i-1][j-1][c];
+				for (k = 0; k <= c; k++)
+					uz[k] = F[ii][jj][k] - F[ii][j-1][k] - F[i-1][jj][k] + F[i-1][j-1][k];
 
-				for (c = MIN_CMAX; c < cmax && !frec[c]; c++);
+				
+				for (k = 0; !uz[k]; k++);
 
-				cate = frec[c];
+				cate = uz[k];
 
-				for (; c <= cmax; c++)
-					if (frec[c] && frec[c] != cate)
+				for (; k <= c; k++)
+					if (uz[k] && uz[k] != cate)
 						break;
 
-				if (c == cmax+1)
-					if (L > LMax)
-						LMax = L, imax = i, jmax = j;
+				if (k == c+1)
+					if (L > Lmax)
+						Lmax = L, imax = i, jmax = j;
 			}
 		}
 	}
 	
 	FILE *fout = fopen("zid.out", "w");
 
-	fprintf(fout, "%hu %hu %hu", LMax*LMax, imax, jmax);
+	fprintf(fout, "%d %d %d", Lmax*Lmax, imax, jmax);
 
 	fclose(fin);
 	fclose(fout);
-
-	for (i = 0; i <= n; i++) {
-		for (j = 0; j <= m; j++)
-			free(fr[i][j]);
-		
-		free(fr[i]);
-		free(a[i]);
-	}
-
-	free(fr);
-	free(a);
-	free(frec);
 
 	return 0;
 }
@@ -148,4 +72,4 @@ int min(int a, int b)
 {
 	return a < b ? a : b;
 }
-// scor 85
+// scor 100 - sol oficiala
